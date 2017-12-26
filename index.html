@@ -1,187 +1,361 @@
 <!DOCTYPE html>
-<html lang="jp">
+<html>
 	<head>
-		<title>SAOメモデフLINEグループASO</title>
-		<meta name="description">
-			SAOギルドのASO、LINEグループにて活動中。
-			その他ゲームFGO、アズールレーンなどのゲーム部屋もあります。
-			参加はお気軽にTwitterゴン ASOまでお願いします。
-		</meta>
+		<title>〜ASO(Absolute Sword Online)〜絶剣を繋ぐ〜</title>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<style>
-			body {
-				background-color: rgb(200,200,200);
-				margin: 0px;
-				overflow: hidden;
+			html, body {
+				height: 100%;
 			}
 
-			#info {
-				position: absolute;
-				top: 0px; width: 100%;
-				color: gray;
-				padding: 5px;
-				font-family:Monospace;
-				font-size:13px;
-				font-weight: bold;
-				text-align:center;
+			body {
+				background-color: #000000;
+				margin: 0;
+				font-family: Helvetica, sans-serif;;
+				overflow: hidden;
 			}
 
 			a {
 				color: #ffffff;
 			}
+
+			#info {
+				position: absolute;
+				width: 100%;
+				color: #ffffff;
+				padding: 5px;
+				font-family: Monospace;
+				font-size: 13px;
+				font-weight: bold;
+				text-align: center;
+				z-index: 1;
+			}
+
+			#menu {
+				position: absolute;
+				bottom: 20px;
+				width: 100%;
+				text-align: center;
+			}
+
+			.element {
+				width: 500px;
+				height: 900px;
+				box-shadow: 0px 0px 12px rgba(0,255,255,0.5);
+				border: 1px solid rgba(127,255,255,0.25);
+				text-align: center;
+				cursor: default;
+			}
+
+			.element:hover {
+				box-shadow: 0px 0px 12px rgba(0,255,255,0.75);
+				border: 1px solid rgba(127,255,255,0.75);
+			}
+
+				.element .number {
+					position: absolute;
+					top: 20px
+					right: 20px;
+					font-size: 12px;
+					color: rgba(127,255,255,0.75);
+				}
+
+				.element .symbol {
+					position: absolute;
+					top: 20px;
+					left: 0px;
+					right: 0px;
+					font-size: 60px;
+					font-weight: bold;
+					color: rgba(255,255,255,0.75);
+					text-shadow: 0 0 10px rgba(0,255,255,0.95);
+				}
+
+				.element .image {
+					left: 50px;
+					margin-top: 100px;
+					width: 400px;
+				}
+
+				.element .details {
+					position: absolute;
+					bottom: 15px;
+					left: 0px;
+					right: 0px;
+					font-size: 12px;
+					color: rgba(127,255,255,0.75);
+				}
+
+			button {
+				color: rgba(127,255,255,0.75);
+				background: transparent;
+				outline: 1px solid rgba(127,255,255,0.75);
+				border: 0px;
+				padding: 5px 10px;
+				cursor: pointer;
+			}
+			button:hover {
+				background-color: rgba(0,255,255,0.5);
+			}
+			button:active {
+				color: #000000;
+				background-color: rgba(0,255,255,0.75);
+			}
 		</style>
 	</head>
 	<body>
-		<div id="container"></div>
-		<h1 id="info">〜ASO(Absolute Sword Online)〜絶剣を繋ぐ〜〜</h1>
-
 		<script src="three.js-master/build/three.js"></script>
-		<script src="js/renderers/Projector.js"></script>
-		<script src="js/renderers/CanvasRenderer.js"></script>
+		<script src="js/libs/tween.min.js"></script>
+		<script src="js/controls/TrackballControls.js"></script>
+		<script src="js/renderers/CSS3DRenderer.js"></script>
+
+		<div id="container"></div>
+		<div id="info">〜ASO(Absolute Sword Online)〜絶剣を繋ぐ〜</div>
+		<div id="menu">
+			<button id="table">テーブル</button>
+			<button id="sphere">球体</button>
+			<button id="helix">螺旋表示</button>
+			<button id="grid">通常表示</button>
+		</div>
 
 		<script>
+
+			var table = [
+				//name, image_url, 横 , 位置
+				"SugarBoy", "1.jpg", "1.00794", 1, 1,
+				"SugarBoy", "2.jpg", "4.002602", 2, 1,
+				"Gucchi", "3.jpg", "6.941", 3, 1,
+				"作者不明", "4.jpg", "9.012182", 4, 1,
+				"作者不明", "5.jpg", "10.811", 5, 1,
+				"SugarBoy", "6.jpg", "12.0107", 1, 2,
+				"ドラゴニュート", "7.jpg", "14.0067", 2, 2,
+				"SugarBoy", "8.jpg", "15.9994", 3, 2,
+				"SugarBoy", "9.jpg", "18.9984032", 4, 2,
+				"SugarBoy", "10.jpg", "20.1797", 5, 2,
+			];
+
 			var camera, scene, renderer;
-			var texture_placeholder,
-			isUserInteracting = false,
-			onMouseDownMouseX = 0, onMouseDownMouseY = 0,
-			lon = 90, onMouseDownLon = 0,
-			lat = 0, onMouseDownLat = 0,
-			phi = 0, theta = 0,
-			target = new THREE.Vector3();
+			var controls;
+
+			var objects = [];
+			var targets = { table: [], sphere: [], helix: [], grid: [] };
 
 			init();
 			animate();
 
 			function init() {
-				var container, mesh;
-				container = document.getElementById( 'container' );
-				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 1100 );
+
+				camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 3000;
+
 				scene = new THREE.Scene();
-				texture_placeholder = document.createElement( 'canvas' );
-				texture_placeholder.width = 128;
-				texture_placeholder.height = 128;
 
-				var context = texture_placeholder.getContext( '2d' );
-				context.fillStyle = 'rgb( 200, 200, 200 )';
-				context.fillRect( 0, 0, texture_placeholder.width, texture_placeholder.height );
+				// table
 
-				var materials = [
+				for ( var i = 0; i < table.length; i += 5 ) {
 
-					loadTexture( 'textures/cube/skybox/px.jpg' ), // right
-					loadTexture( 'textures/cube/skybox/nx.jpg' ), // left
-					loadTexture( 'textures/cube/skybox/py.jpg' ), // top
-					loadTexture( 'textures/cube/skybox/ny.jpg' ), // bottom
-					loadTexture( 'textures/cube/skybox/pz.jpg' ), // back
-					loadTexture( 'textures/cube/skybox/nz.jpg' )  // front
+					var element = document.createElement( 'div' );
+					element.className = 'element';
+					element.style.backgroundColor = 'rgba(0,127,127,' + ( Math.random() * 0.5 + 0.25 ) + ')';
 
-				];
+					var number = document.createElement( 'div' );
+					number.className = 'number';
+					number.textContent = (i/5) + 1;
+					element.appendChild( number );
 
-				var geometry = new THREE.BoxGeometry( 300, 300, 300, 7, 7, 7 );
-				geometry.scale( - 1, 1, 1 );
+					var symbol = document.createElement( 'div' );
+					symbol.className = 'symbol';
+					symbol.textContent = table[ i ];
+					element.appendChild( symbol );
 
-				mesh = new THREE.Mesh( geometry, materials );
-				scene.add( mesh );
+					var details = document.createElement( 'div' );
+					details.className = 'details';
+					details.innerHTML = table[ i + 1 ] + '<br>' + table[ i + 2 ];
+					element.appendChild( details );
 
-				renderer = new THREE.CanvasRenderer();
-				renderer.setPixelRatio( window.devicePixelRatio );
+					var image = document.createElement( 'img' );
+					image.className = 'image';
+					image.src = 'images/' + String(table[ i + 1 ]);
+					element.appendChild( image );
+
+					var object = new THREE.CSS3DObject( element );
+					object.position.x = Math.random() * 4000 - 2000;
+					object.position.y = Math.random() * 4000 - 2000;
+					object.position.z = Math.random() * 4000 - 2000;
+					scene.add( object );
+
+					objects.push( object );
+
+					var object = new THREE.Object3D();
+					object.position.x = ( table[ i + 3 ] * 700 ) - 1330;
+					object.position.y = - ( table[ i + 4 ] * 1000 ) + 990;
+
+					targets.table.push( object );
+				}
+
+				// sphere
+
+				var vector = new THREE.Vector3();
+				var spherical = new THREE.Spherical();
+
+				for ( var i = 0, l = objects.length; i < l; i ++ ) {
+
+					var phi = Math.acos( -1 + ( 2 * i ) / l );
+					var theta = Math.sqrt( l * Math.PI ) * phi;
+
+					var object = new THREE.Object3D();
+
+					spherical.set( 800, phi, theta );
+
+					object.position.setFromSpherical( spherical );
+
+					vector.copy( object.position ).multiplyScalar( 2 );
+
+					object.lookAt( vector );
+
+					targets.sphere.push( object );
+
+				}
+
+				// helix
+
+				var vector = new THREE.Vector3();
+				var cylindrical = new THREE.Cylindrical();
+
+				for ( var i = 0, l = objects.length; i < l; i ++ ) {
+
+					var theta = i * 0.5 + Math.PI;
+					var y = - ( i * 8 ) + 450;
+
+					var object = new THREE.Object3D();
+
+					cylindrical.set( 900, theta, y );
+
+					object.position.setFromCylindrical( cylindrical );
+
+					vector.x = object.position.x * 2;
+					vector.y = object.position.y;
+					vector.z = object.position.z * 2;
+
+					object.lookAt( vector );
+
+					targets.helix.push( object );
+
+				}
+
+				// grid
+				for ( var i = 0; i < objects.length; i ++ ) {
+					var object = new THREE.Object3D();
+
+					object.position.x = ( ( i % 5 ) * 600 ) - 800;
+					object.position.y = ( - ( Math.floor( i / 5 ) % 5 ) * 1000 ) + 1000;
+					object.position.z = ( Math.floor( i / 25 ) ) * 1000 - 2000;
+
+					targets.grid.push( object );
+				}
+
+
+				renderer = new THREE.CSS3DRenderer();
 				renderer.setSize( window.innerWidth, window.innerHeight );
-				container.appendChild( renderer.domElement );
+				renderer.domElement.style.position = 'absolute';
+				document.getElementById( 'container' ).appendChild( renderer.domElement );
 
-				document.addEventListener( 'mousedown', onDocumentMouseDown, false );
-				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-				document.addEventListener( 'mouseup', onDocumentMouseUp, false );
-				document.addEventListener( 'wheel', onDocumentMouseWheel, false );
+				controls = new THREE.TrackballControls( camera, renderer.domElement );
+				controls.rotateSpeed = 0.5;
+				controls.minDistance = 500;
+				controls.maxDistance = 6000;
+				controls.addEventListener( 'change', render );
 
-				document.addEventListener( 'touchstart', onDocumentTouchStart, false );
-				document.addEventListener( 'touchmove', onDocumentTouchMove, false );
+				var button = document.getElementById( 'table' );
+				button.addEventListener( 'click', function ( event ) {
+
+					transform( targets.table, 2000 );
+
+				}, false );
+
+				var button = document.getElementById( 'sphere' );
+				button.addEventListener( 'click', function ( event ) {
+
+					transform( targets.sphere, 2000 );
+
+				}, false );
+
+				var button = document.getElementById( 'helix' );
+				button.addEventListener( 'click', function ( event ) {
+
+					transform( targets.helix, 2000 );
+
+				}, false );
+
+				var button = document.getElementById( 'grid' );
+				button.addEventListener( 'click', function ( event ) {
+
+					transform( targets.grid, 2000 );
+
+				}, false );
+
+				transform( targets.grid, 2000 );
 
 				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function transform( targets, duration ) {
+
+				TWEEN.removeAll();
+
+				for ( var i = 0; i < objects.length; i ++ ) {
+
+					var object = objects[ i ];
+					var target = targets[ i ];
+
+					new TWEEN.Tween( object.position )
+						.to( { x: target.position.x, y: target.position.y, z: target.position.z }, Math.random() * duration + duration )
+						.easing( TWEEN.Easing.Exponential.InOut )
+						.start();
+
+					new TWEEN.Tween( object.rotation )
+						.to( { x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, Math.random() * duration + duration )
+						.easing( TWEEN.Easing.Exponential.InOut )
+						.start();
+
+				}
+
+				new TWEEN.Tween( this )
+					.to( {}, duration * 2 )
+					.onUpdate( render )
+					.start();
+
 			}
 
 			function onWindowResize() {
+
 				camera.aspect = window.innerWidth / window.innerHeight;
 				camera.updateProjectionMatrix();
+
 				renderer.setSize( window.innerWidth, window.innerHeight );
-			}
 
-			function loadTexture( path ) {
-				var texture = new THREE.Texture( texture_placeholder );
-				var material = new THREE.MeshBasicMaterial( { map: texture, overdraw: 0.5 } );
-				var image = new Image();
-				image.onload = function () {
-					texture.image = this;
-					texture.needsUpdate = true;
-				};
-				image.src = path;
-				return material;
-			}
+				render();
 
-			function onDocumentMouseDown( event ) {
-				event.preventDefault();
-				isUserInteracting = true;
-
-				onPointerDownPointerX = event.clientX;
-				onPointerDownPointerY = event.clientY;
-				onPointerDownLon = lon;
-				onPointerDownLat = lat;
-			}
-
-			function onDocumentMouseMove( event ) {
-				if ( isUserInteracting === true ) {
-					lon = ( onPointerDownPointerX - event.clientX ) * 0.1 + onPointerDownLon;
-					lat = ( event.clientY - onPointerDownPointerY ) * 0.1 + onPointerDownLat;
-				}
-			}
-
-			function onDocumentMouseUp( event ) {
-				isUserInteracting = false;
-			}
-
-			function onDocumentMouseWheel( event ) {
-				var fov = camera.fov + event.deltaY * 0.05;
-				camera.fov = THREE.Math.clamp( fov, 10, 75 );
-				camera.updateProjectionMatrix();
-			}
-
-
-			function onDocumentTouchStart( event ) {
-				if ( event.touches.length == 1 ) {
-					event.preventDefault();
-
-					onPointerDownPointerX = event.touches[ 0 ].pageX;
-					onPointerDownPointerY = event.touches[ 0 ].pageY;
-
-					onPointerDownLon = lon;
-					onPointerDownLat = lat;
-				}
-			}
-
-			function onDocumentTouchMove( event ) {
-				if ( event.touches.length == 1 ) {
-					event.preventDefault();
-					lon = ( onPointerDownPointerX - event.touches[0].pageX ) * 0.1 + onPointerDownLon;
-					lat = ( event.touches[0].pageY - onPointerDownPointerY ) * 0.1 + onPointerDownLat;
-				}
 			}
 
 			function animate() {
+
 				requestAnimationFrame( animate );
-				update();
+
+				TWEEN.update();
+
+				controls.update();
+
 			}
 
-			function update() {
-				if ( isUserInteracting === false ) { lon += 0.1; }
-				lat = Math.max( - 85, Math.min( 85, lat ) );
-				phi = THREE.Math.degToRad( 90 - lat );
-				theta = THREE.Math.degToRad( lon );
+			function render() {
 
-				target.x = 500 * Math.sin( phi ) * Math.cos( theta );
-				target.y = 500 * Math.cos( phi );
-				target.z = 500 * Math.sin( phi ) * Math.sin( theta );
-				camera.lookAt( target );
 				renderer.render( scene, camera );
+
 			}
+
 		</script>
 	</body>
 </html>
